@@ -10,7 +10,7 @@ const productRouter = require('./routes/product');
 const cartRouter =require("./routes/cart")
 
 app.use(cors({
-    origin: 'http://localhost:5173', // Replace with your frontend domain
+    origin: 'https://bagrit-frontend.vercel.app', // Replace with your frontend domain
     credentials: true,
 }));
 app.use(cookieParser());
