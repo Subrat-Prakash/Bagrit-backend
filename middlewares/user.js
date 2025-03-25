@@ -2,7 +2,8 @@ const jwt = require("jsonwebtoken");
 require("dotenv").config();
 
 function userMiddleware(req, res, next) {
-    const token = req.cookies.token;
+    // ✅ Extract token from cookie or Authorization header
+    const token = req.cookies.token || req.headers.authorization?.split(" ")[1];
 
     if (!token) {
         return res.status(401).json({ error: "Unauthorized. Please log in." });
@@ -14,13 +15,13 @@ function userMiddleware(req, res, next) {
         next();
     } catch (err) {
         if (err.name === "TokenExpiredError") {
-            // Token has expired
+            // ✅ Token expired: Clear cookie and return 401
             res.clearCookie("token");
-            return res.redirect('/');
+            return res.status(401).json({ error: "Session expired. Please log in again." });
         } else {
-            // Token verification failed for some other reason
+            // ✅ Invalid token: Clear cookie and return 401
             res.clearCookie("token");
-            return res.status(401).json({ error: "Unauthorized. Please log in." });
+            return res.status(401).json({ error: "Unauthorized. Invalid token." });
         }
     }
 }

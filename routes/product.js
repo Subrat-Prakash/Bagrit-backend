@@ -1,52 +1,77 @@
 const express = require("express");
 const router = express.Router();
-const bcrypt = require('bcrypt');
-const userMiddleware = require('../middlewares/user')
+const userMiddleware = require("../middlewares/user");
 const jwt = require("jsonwebtoken");
 const innovativeProd = require("../models/innovativeProdModel");
-const Stripe = require("stripe")("sk_test_51OduLoSEuj58CJVxfj0JxednavltZr3C59KJx9Ik6b9ZhHw6AmMigGRBri6vNvJkvOp1GGaT0ZUElG21zUdPQer6005hR0RkBD")
-
-
 require("dotenv").config();
 
-const User = require("../models/user")
-router.get("/getInnovativeProd", userMiddleware,async (req, res) => {
+// ✅ Get All Innovative Products
+router.get("/getInnovativeProd", userMiddleware, async (req, res) => {
     try {
-        console.log("first")
-       console.log(req.user.email);
-        console.log("cookie data")
+        console.log("Fetching innovative products...");
+        console.log("User Email:", req.user.email);
+
         const allInnovativeProds = await innovativeProd.find();
-        res.json(allInnovativeProds);
+
+        if (!allInnovativeProds || allInnovativeProds.length === 0) {
+            return res.status(404).json({ message: "No products found" });
+        }
+
+        res.status(200).json(allInnovativeProds);
+
     } catch (error) {
-        console.error("Error getting all innovative products:", error);
+        console.error("Error fetching products:", error);
         res.status(500).json({ error: "Internal server error" });
     }
 });
-router.get("/getInnovativeProd/:id",userMiddleware, async (req, res) => {
+
+// ✅ Get Innovative Product by ID
+router.get("/getInnovativeProd/:id", userMiddleware, async (req, res) => {
+    const { id } = req.params;
+
     try {
-        const id = req.params.id;
         const innovativeProdById = await innovativeProd.findById(id);
-  
-        if (innovativeProdById ) {
-            res.json(innovativeProdById );
-        } else {
-            res.status(404).json({ msg: "Innovative request not found" });
+
+        if (!innovativeProdById) {
+            return res.status(404).json({ message: "Product not found" });
         }
+
+        res.status(200).json(innovativeProdById);
+
     } catch (error) {
-        console.error("Error fetching waste request:", error);
-        res.status(500).json({ msg: "Internal Server Error" });
+        console.error("Error fetching product by ID:", error);
+
+        if (error.kind === "ObjectId") {
+            return res.status(400).json({ message: "Invalid product ID" });
+        }
+
+        res.status(500).json({ error: "Internal server error" });
     }
-  });
-  router.get('/search', async (req, res) => {
+});
+
+// ✅ Search Innovative Products (Case-Insensitive)
+router.get('/search', async (req, res) => {
+    const { query } = req.query;
+
     try {
-      const query = req.query.query;
-      const products = await innovativeProd.find({ 
-        title: { $regex: query, $options: 'i' } // Case-insensitive search
-      });
-      
-      res.json(products);
+        if (!query) {
+            return res.status(400).json({ message: "Search query is required" });
+        }
+
+        const products = await innovativeProd.find({
+            title: { $regex: query, $options: "i" } // Case-insensitive search
+        });
+
+        if (!products.length) {
+            return res.status(404).json({ message: "No products match your search" });
+        }
+
+        res.status(200).json(products);
+
     } catch (error) {
-      res.status(500).send('Server error');
+        console.error("Error searching products:", error);
+        res.status(500).json({ error: "Internal server error" });
     }
-  });
-  module.exports = router;
+});
+
+module.exports = router;
